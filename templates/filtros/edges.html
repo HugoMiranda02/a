@@ -1,0 +1,234 @@
+<div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" value="" id="enable" />
+    <label class="form-check-label" for="enable"> Default checkbox </label>
+  </div>
+
+  <label for="kernelY" class="form-label">Kernel - Y</label>
+  <input
+    type="range"
+    class="form-range"
+    value="0"
+    min="1"
+    max="50"
+    id="kernel-y"
+    class="mb-3"
+  />
+
+  <label for="kernelY" class="form-label">Kernel - X</label>
+  <input
+    type="range"
+    class="form-range"
+    value="0"
+    min="1"
+    max="50"
+    id="kernel-x"
+    class="mb-3"
+  />
+
+  <label for="kernelY" class="form-label">Kernel Filtro 2D - Y</label>
+  <input
+    type="range"
+    class="form-range"
+    value="0"
+    min="1"
+    max="50"
+    id="kernelF-y"
+    class="mb-3"
+  />
+
+  <label for="kernelY" class="form-label">Kernel Filtro 2D - X</label>
+  <input
+    type="range"
+    class="form-range"
+    value="0"
+    min="1"
+    max="50"
+    id="kernelF-x"
+    class="mb-3"
+  />
+  <label for="kernelY" class="form-label">Threshold 1</label>
+  <input
+    type="range"
+    class="form-range"
+    value="0"
+    min="1"
+    max="255"
+    id="thresh1"
+    class="mb-3"
+  />
+  <label for="kernelY" class="form-label">Threshold 2</label>
+  <input
+    type="range"
+    class="form-range"
+    value="0"
+    min="1"
+    max="255"
+    id="thresh2"
+    class="mb-3"
+  />
+  <div class="form-check">
+    <input
+      class="form-check-input"
+      type="radio"
+      name="flexRadioDefault"
+      id="external"
+    />
+    <label class="form-check-label" for="external"> Contornos Externos </label>
+  </div>
+  <div class="form-check">
+    <input
+      class="form-check-input"
+      type="radio"
+      name="flexRadioDefault"
+      id="internal"
+    />
+    <label class="form-check-label" for="external"> Contornos Internos </label>
+  </div>
+  <script>
+    console.log(filtros);
+    $(document).ready(() => {
+      $.ajax({
+        url: "/getEdges",
+        success: (res) => {
+          console.log(res);
+          console.log(res.kernely);
+          $("#kernel-y").val(res.kernely);
+          $("#kernel-x").val(res.kernelx);
+          $("#kernelF-y").val(res.kernelFy);
+          $("#kernelF-x").val(res.kernelFy);
+          $("#thresh1").val(res.thresh1);
+          $("#thresh2").val(res.thresh2);
+          $("#internal").prop("checked", res.internal == "True");
+          $("#external").prop("checked", res.external == "True");
+        },
+      });
+    });
+
+    $("#enable").on("click", () => {
+      var formData = new FormData();
+      formData.append("edges", $("#enable").prop("checked"));
+      filtros = addFilter("edges", true, filtros);
+      $.ajax({
+        url: "/edges",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+    $("#internal").on("click", () => {
+      var formData = new FormData();
+      filtros = addFilter("internal", true);
+      filtros = removeFilter("external", filtros);
+      formData.append("edges", $("#internal").prop("checked"));
+      $.ajax({
+        url: "/internal",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+    $("#external").on("click", () => {
+      var formData = new FormData();
+      filtros = addFilter("external", true, filtros);
+      filtros = removeFilter("internal", filtros);
+      formData.append("edges", $("#external").prop("checked"));
+      $.ajax({
+        url: "/external",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#kernel-y").on("input", () => {
+      var formData = new FormData();
+      filtros = addFilter("kernely", $("#kernel-y").val(), filtros);
+      formData.append("kernel", $("#kernel-y").val());
+      $.ajax({
+        url: "/kernelY",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#kernel-x").on("input", () => {
+      var formData = new FormData();
+      filtros = addFilter("kernelx", $("#kernel-x").val(), filtros);
+      formData.append("kernel", $("#kernel-x").val());
+      $.ajax({
+        url: "/kernelX",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#kernelF-y").on("input", () => {
+      var formData = new FormData();
+      filtros = addFilter("kernelfy", $("#kernelF-y").val(), filtros);
+      formData.append("kernel", $("#kernelF-y").val());
+      $.ajax({
+        url: "/kernelFY",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#kernelF-x").on("input", () => {
+      var formData = new FormData();
+      formData.append("kernel", $("#kernelF-x").val());
+      filtros = addFilter("kernelfx", $("#kernelF-x").val(), filtros);
+      $.ajax({
+        url: "/kernelFX",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#thresh1").on("input", () => {
+      var formData = new FormData();
+      formData.append("thresh", $("#thresh1").val());
+      filtros = addFilter("thresh1", $("#thresh1").val(), filtros);
+      $.ajax({
+        url: "/thresh",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#thresh2").on("input", () => {
+      var formData = new FormData();
+      formData.append("thresh", $("#thresh2").val());
+      filtros = addFilter("thresh2", $("#thresh2").val(), filtros);
+      $.ajax({
+        url: "/threshUpper",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+  </script>
+</div>

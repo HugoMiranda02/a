@@ -1,0 +1,447 @@
+<body>
+  <div style="margin: 2vh">
+    <div class="card text-center" style="min-height: 60vh; width: 100%">
+      <div class="card-body">
+        <div class="row">
+          <h1>Visão Computacional</h1>
+          <div class="col-6" style="display: flex; position: relative">
+            <img
+              id="bg"
+              style="position: absolute; width: 720px; height: 480px"
+              src="{{ url_for('requisitionsRoutes.video_feed') }}"
+            />
+            <canvas
+              id="canvas"
+              style="border: 1px solid #000; width: 640px; height: 360px"
+            >
+            </canvas>
+          </div>
+          <div class="col-6">
+            <ul class="nav nav-tabs nav-fill">
+              <li class="nav-item" id="nav-roi" style="cursor: pointer">
+                <a href="#" class="nav-link active">Região de Interesse</a>
+              </li>
+              <li class="nav-item" id="nav-filtro" style="cursor: pointer">
+                <a class="nav-link disabled" href="#">Filtros</a>
+              </li>
+              <li class="nav-item" id="nav-final" style="cursor: pointer">
+                <a href="#" class="nav-link disabled">Final</a>
+              </li>
+            </ul>
+            <div id="passo1">
+              <div class="col">
+                <div class="row" style="min-height: 70vh">
+                  <button
+                    disabled
+                    id="roi"
+                    class="btn btn-primary"
+                    style="width: 150px; height: 50px"
+                  >
+                    Cortar
+                  </button>
+                  <button
+                    class="btn btn-primary"
+                    id="reset"
+                    style="width: 150px; height: 50px"
+                  >
+                    Restaurar Imagem
+                  </button>
+                </div>
+                <div class="row">
+                  <button id="next" disabled class="btn btn-primary">
+                    Próximo passo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="passo2" hidden>
+              <h3 class="mb-3">Filtros</h3>
+              <div id="buttons">
+                <button
+                  class="btn btn-outline-primary mb-3"
+                  onclick="changeFunction('/filtro/blur')"
+                >
+                  Blur
+                </button>
+                <button
+                  class="btn btn-outline-primary mb-3"
+                  onclick="changeFunction('/filtro/edges')"
+                >
+                  Edges
+                </button>
+                <button
+                  class="btn btn-outline-primary mb-3"
+                  onclick="changeFunction('/filtro/contagemPixels')"
+                >
+                  Contagem de pixels
+                </button>
+              </div>
+              <div id="contents" class="mb-3">
+                <div id="function" class="mb-3"></div>
+                <button id="return" class="btn btn-outline-warning mb-3">
+                  Retornar aos filtros
+                </button>
+              </div>
+              <button id="last" class="btn btn-primary">Voltar</button>
+              <button id="next_1" class="btn btn-primary">Próximo passo</button>
+            </div>
+
+            <div id="passo3" hidden>
+              <button id="select" class="btn btn-primary">
+                Selecionar Pixel
+              </button>
+            </div>
+            <div id="passo4" hidden>
+              <button id="finalizar" class="btn btn-primary">Finalizar</button>
+              <button id="last_1" class="btn btn-primary">Voltar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="{{url_for('static', filename='libs/fabricjs.js')}}"></script>
+  <script>
+    var filtros = [];
+
+    function addFilter(filter, value, filtros) {
+      for (i in filtros) {
+        if (filtros[i][0] == filter) {
+          filtros[i] = [filter, value];
+          return filtros;
+        }
+      }
+      filtros = filtros.concat([filter, value]);
+      return filtros;
+    }
+    function removeFilter(filter, filtros) {
+      for (i in filtros) {
+        if (filtros[i][0] == filter) {
+          filtros[i] = [];
+        }
+      }
+      return filtros;
+    }
+
+    function changeFunction(url) {
+      $("#buttons").attr("hidden", "hidden");
+      $("#contents").removeAttr("hidden");
+      $("#function").load(url, function () {});
+    }
+
+    $("#return").on("click", () => {
+      $("#buttons").removeAttr("hidden");
+      $("#contents").attr("hidden", "hidden");
+      pixel = false;
+    });
+
+    $("#next").on("click", () => {
+      $("#nav-roi").children().removeClass("active").addClass("disabled");
+      $("#nav-final").children().addClass("disabled").removeClass("active");
+      $("#nav-filtro").children().removeClass("disabled").addClass("active");
+
+      $("#passo1").attr("hidden", "hidden");
+      $("#passo2").removeAttr("hidden");
+      $("#passo3").attr("hidden", "hidden");
+    });
+
+    $("#last").on("click", () => {
+      $("#nav-roi").children().addClass("active").removeClass("disabled");
+      $("#nav-final").children().addClass("disabled").removeClass("active");
+      $("#nav-filtro").children().addClass("disabled").removeClass("active");
+
+      $("#passo1").removeAttr("hidden");
+      $("#passo2").attr("hidden", "hidden");
+      $("#passo3").attr("hidden", "hidden");
+    });
+
+    $("#next_1").on("click", () => {
+      $("#nav-roi").children().addClass("disabled").removeClass("active");
+      $("#nav-final").children().addClass("active").removeClass("disabled");
+      $("#nav-filtro").children().addClass("disabled").removeClass("active");
+
+      $("#passo1").attr("hidden", "hidden");
+      $("#passo2").attr("hidden", "hidden");
+      $("#passo3").removeAttr("hidden");
+    });
+
+    var draw = false;
+    var pixel = false;
+    var rect;
+    var x, y;
+    var x2, y2;
+    var height, width;
+    var canvas = new fabric.Canvas("canvas");
+    new fabric.Control({
+      mtr: false,
+    });
+
+    canvas.setHeight(480);
+    canvas.setWidth(720);
+    boundingBox = new fabric.Rect({
+      id: "bounding-box",
+      width: 720,
+      height: 480,
+      hasBorders: false,
+      hasControls: false,
+      lockMovementX: true,
+      lockMovementY: true,
+      evented: false,
+      stroke: "black",
+      fill: "translate",
+      selectable: false,
+    });
+
+    $("#edges").on("click", () => {
+      var formData = new FormData();
+      formData.append("edges", $("#edges").prop("checked"));
+      $.ajax({
+        url: "/edges",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $(".canvas-container").mousedown((e) => {
+      if (!draw) {
+        canvas.remove(rect);
+        x = e.offsetX;
+        y = e.offsetY;
+      }
+    });
+
+    $(".canvas-container").mousedown((e) => {
+      if (pixel) {
+        pixel = false;
+        var formData = new FormData();
+        formData.append("x", e.offsetX);
+        formData.append("y", e.offsetY);
+        $.ajax({
+          url: "/selectPixel",
+          cache: false,
+          contentType: false,
+          processData: false,
+          data: formData,
+          type: "POST",
+        });
+      }
+    });
+
+    $(".canvas-container").mouseup((e) => {
+      if (!draw) {
+        x2 = e.offsetX;
+        y2 = e.offsetY;
+        let left = x < x2 ? x : x2;
+        let top = y < y2 ? y : y2;
+        width = x < x2 ? x2 - x : x - x2;
+        height = y < y2 ? y2 - y : y - y2;
+        rect = new fabric.Rect({
+          width: width,
+          height: height,
+          left: left,
+          top: top,
+          fill: "transparent",
+          border: " 1px solid blue",
+          stroke: "blue",
+          strokeWidth: 1,
+          hasRotatingPoint: false,
+        });
+        $("#roi").removeAttr("disabled");
+        canvas.add(rect);
+        draw = true;
+        rect.setControlsVisibility({
+          mtr: false,
+        });
+        canvas.on("object:moving", function (e) {
+          var object = e.target;
+          console.log(object.scaleX);
+
+          // check left
+          if (object.left * object.scaleX < boundingBox.left) {
+            object.set("left", boundingBox.left);
+          }
+          // check right
+          else if (
+            object.left * object.scaleX + object.width >
+            boundingBox.left + boundingBox.width
+          ) {
+            object.set(
+              "left",
+              boundingBox.left + boundingBox.width - object.width
+            );
+          }
+          // check top
+          if (object.top * object.scaleY < boundingBox.top) {
+            object.set("top", boundingBox.top);
+          }
+          // check bottom
+          else if (
+            object.top * object.scaleY + object.height >
+            boundingBox.top + boundingBox.height
+          ) {
+            object.set(
+              "top",
+              boundingBox.top + boundingBox.height - object.height
+            );
+          }
+        });
+      }
+    });
+
+    $("#select").on("click", () => {
+      $(".canvas-container").mousedown((e) => {
+        let x = e.offsetX;
+        let y = e.offsetY;
+        var formData = new FormData();
+        formData.append("x", x);
+        formData.append("y", y);
+        $.ajax({
+          url: "/selectPixel",
+          cache: false,
+          contentType: false,
+          processData: false,
+          data: formData,
+          type: "POST",
+        });
+        $(".canvas-container").mouseup((e) => {
+          if (!draw) {
+            x2 = e.offsetX;
+            y2 = e.offsetY;
+            let left = x < x2 ? x : x2;
+            let top = y < y2 ? y : y2;
+            width = x < x2 ? x2 - x : x - x2;
+            height = y < y2 ? y2 - y : y - y2;
+            rect = new fabric.Rect({
+              width: width,
+              height: height,
+              left: left,
+              top: top,
+              fill: "transparent",
+              border: " 1px solid blue",
+              stroke: "blue",
+              strokeWidth: 1,
+              hasRotatingPoint: false,
+            });
+            $("#roi").removeAttr("disabled");
+            canvas.add(rect);
+            draw = true;
+            rect.setControlsVisibility({
+              mtr: false,
+            });
+            canvas.on("object:moving", function (e) {
+              var object = e.target;
+              console.log(object.scaleX);
+
+              // check left
+              if (object.left * object.scaleX < boundingBox.left) {
+                object.set("left", boundingBox.left);
+              }
+              // check right
+              else if (
+                object.left * object.scaleX + object.width >
+                boundingBox.left + boundingBox.width
+              ) {
+                object.set(
+                  "left",
+                  boundingBox.left + boundingBox.width - object.width
+                );
+              }
+              // check top
+              if (object.top * object.scaleY < boundingBox.top) {
+                object.set("top", boundingBox.top);
+              }
+              // check bottom
+              else if (
+                object.top * object.scaleY + object.height >
+                boundingBox.top + boundingBox.height
+              ) {
+                object.set(
+                  "top",
+                  boundingBox.top + boundingBox.height - object.height
+                );
+              }
+            });
+          }
+        });
+      });
+    });
+
+    $("#roi").on("click", () => {
+      canvas.remove(rect);
+      $("#next").removeAttr("disabled");
+      $("#reset").removeAttr("disabled");
+      var formData = new FormData();
+      formData.append("x", rect.get("left"));
+      formData.append("y", rect.get("top"));
+      formData.append("w", rect.get("width") * rect.scaleX);
+      formData.append("h", rect.get("height") * rect.scaleY);
+      $.ajax({
+        url: "/ROI",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+
+    $("#reset").on("click", () => {
+      $("#next").attr("disabled", "disabled");
+      $.ajax({ url: "/reset" });
+      canvas.remove(rect);
+      draw = false;
+    });
+
+    $("#finalizar").on("click", () => {
+      var id;
+      var formData = new FormData();
+      formData.append("nome", Ferramenta.nome);
+      formData.append("desc", Ferramenta.desc);
+      $.ajax({
+        url: "/registrarFerramenta",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+        success: (res) => {
+          id = res.id;
+
+          let left = x < x2 ? x : x2;
+          let top = y < y2 ? y : y2;
+          let w = x < x2 ? x2 - x : x - x2;
+          let h = y < y2 ? y2 - y : y - y2;
+          filtros = filtros.concat("left", left);
+          filtros = filtros.concat("top", top);
+          filtros = filtros.concat("w", w);
+          filtros = filtros.concat("h", h);
+          filtros = filtros.concat("edges", $("#edges").prop("checked"));
+          var form_data = new FormData();
+          form_data.append("filtros[]", filtros);
+          console.log(id);
+          form_data.append("id", id);
+          $.ajax({
+            url: "/salvarFiltros",
+            cache: false,
+            contentType: false,
+            processData: false,
+            data: form_data,
+            type: "POST",
+            success: () => {
+              var date = new Date();
+              setTimeout(() => {
+                Swal.fire("Concluído!", "", "success");
+                $.ajax({ url: "/reset" });
+                changePage("/ferramentas");
+              }, 500);
+            },
+          });
+        },
+      });
+    });
+  </script>
+</body>

@@ -1,0 +1,19 @@
+<body>
+  <label for="blur" class="form-label">Blur</label>
+  <input type="range" class="form-range" value="0" min="0" max="50" id="blur" />
+  <script>
+    $("#blur").on("input", () => {
+      var formData = new FormData();
+      formData.append("blur", $("#blur").val());
+      filtros = addFilter("blur", $("#blur").val());
+      $.ajax({
+        url: "/blur",
+        cache: false,
+        contentType: false,
+        processData: false,
+        data: formData,
+        type: "POST",
+      });
+    });
+  </script>
+</body>
