@@ -1,4 +1,5 @@
 var MainProperties = {};
+var MainFilters = {};
 var Ferramenta = {
   id: 0,
   nome: "",
@@ -12,7 +13,8 @@ const myTimer = async () => {
     data: {},
     dataType: "JSON",
     success: function (data) {
-      MainProperties = data;
+      MainProperties = data.properties;
+      MainFilters = data.filters;
     },
     error: function (data) {
       console.log(data);

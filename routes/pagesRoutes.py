@@ -22,6 +22,7 @@ def visao():
 @pageRoutes.route("/production/<id>", methods=['GET'])
 def producao(id):
     MainProperties["ferramenta"]["id"] = int(id)
+    print(MainProperties)
     return render_template("pages/producao.html")
 
 

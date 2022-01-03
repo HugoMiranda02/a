@@ -1,20 +1,29 @@
 <body>
-  <div style="margin: 2vh">
+  <div style="margin: 1vh">
     <div class="card text-center" style="min-height: 60vh; width: 100%">
       <div class="card-body">
         <div class="row">
-          <h1>Visão Computacional</h1>
-          <div class="col-6" style="display: flex; position: relative">
-            <img
-              id="bg"
-              style="position: absolute; width: 720px; height: 480px"
-              src="{{ url_for('requisitionsRoutes.video_feed') }}"
-            />
-            <canvas
-              id="canvas"
-              style="border: 1px solid #000; width: 640px; height: 360px"
-            >
-            </canvas>
+          <div class="col-6">
+            <h2>Raw Image</h2>
+            <div class="row" style="display: flex; position: relative">
+              <img
+                id="bg"
+                style="position: absolute; width: 720px; height: 480px"
+                src="{{ url_for('requisitionsRoutes.raw_video') }}"
+              />
+              <canvas
+                id="canvas"
+                style="border: 1px solid #000; width: 640px; height: 360px"
+              ></canvas>
+            </div>
+            <h2>Final Image</h2>
+            <div class="row">
+              <img
+                id="bg"
+                style="position: absolute; width: 720px; height: 480px"
+                src="{{ url_for('requisitionsRoutes.video_feed') }}"
+              />
+            </div>
           </div>
           <div class="col-6">
             <ul class="nav nav-tabs nav-fill">
@@ -86,13 +95,7 @@
               <button id="last" class="btn btn-primary">Voltar</button>
               <button id="next_1" class="btn btn-primary">Próximo passo</button>
             </div>
-
             <div id="passo3" hidden>
-              <button id="select" class="btn btn-primary">
-                Selecionar Pixel
-              </button>
-            </div>
-            <div id="passo4" hidden>
               <button id="finalizar" class="btn btn-primary">Finalizar</button>
               <button id="last_1" class="btn btn-primary">Voltar</button>
             </div>
@@ -103,6 +106,9 @@
   </div>
   <script src="{{url_for('static', filename='libs/fabricjs.js')}}"></script>
   <script>
+    $.ajax({
+      url: "/reset",
+    });
     var filtros = [];
 
     function addFilter(filter, value, filtros) {
@@ -112,13 +118,14 @@
           return filtros;
         }
       }
-      filtros = filtros.concat([filter, value]);
+      filtros = filtros.concat([[filter, value]]);
       return filtros;
     }
+
     function removeFilter(filter, filtros) {
       for (i in filtros) {
         if (filtros[i][0] == filter) {
-          filtros[i] = [];
+          filtros.splice(i, i);
         }
       }
       return filtros;
@@ -371,7 +378,6 @@
     });
 
     $("#roi").on("click", () => {
-      canvas.remove(rect);
       $("#next").removeAttr("disabled");
       $("#reset").removeAttr("disabled");
       var formData = new FormData();
@@ -391,7 +397,9 @@
 
     $("#reset").on("click", () => {
       $("#next").attr("disabled", "disabled");
-      $.ajax({ url: "/reset" });
+      $.ajax({
+        url: "/reset",
+      });
       canvas.remove(rect);
       draw = false;
     });
@@ -419,7 +427,6 @@
           filtros = filtros.concat("top", top);
           filtros = filtros.concat("w", w);
           filtros = filtros.concat("h", h);
-          filtros = filtros.concat("edges", $("#edges").prop("checked"));
           var form_data = new FormData();
           form_data.append("filtros[]", filtros);
           console.log(id);
@@ -435,7 +442,7 @@
               var date = new Date();
               setTimeout(() => {
                 Swal.fire("Concluído!", "", "success");
-                $.ajax({ url: "/reset" });
+                $("#bg").removeAttr("src");
                 changePage("/ferramentas");
               }, 500);
             },

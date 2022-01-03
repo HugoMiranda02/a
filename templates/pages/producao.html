@@ -1,41 +1,53 @@
 <body>
-    <div style="margin: 2vh;">
-        <div class="card text-center" style="min-height: 60vh; width: 100%;">
-            <div class="card-body">
-                <div class="row">
-                    <h1>
-                        Visão Computacional
-                    </h1>
-                    <div class="col-6" style="display: flex; position: relative;">
-                        <img id="img_detection" style="position: absolute; width: 720px; height: 480px;" src="">
-                        <canvas id="canvas" style="border: 1px solid #000; width: 720px; height: 480px;">
-                        </canvas>
-                    </div>
-                    <div class="col-6">
-                        <button id="trigger" class="btn btn-primary">Trigger</button>
-                    </div>
-                </div>
-            </div>
+  <div style="margin: 2vh">
+    <div class="card text-center" style="min-height: 60vh; width: 100%">
+      <div class="card-body">
+        <div class="row">
+          <h1>Visão Computacional</h1>
+          <div class="col-6" style="display: flex; position: relative">
+            <img
+              id="img_detection"
+              style="position: absolute; width: 720px; height: 480px"
+              src=""
+            />
+            <canvas
+              id="canvas"
+              style="border: 1px solid #000; width: 720px; height: 480px"
+            >
+            </canvas>
+          </div>
+          <div class="col-6">
+            <div id="result"></div>
+            <button id="trigger" class="btn btn-primary">Trigger</button>
+          </div>
         </div>
+      </div>
     </div>
-    <script src="{{url_for('static', filename='libs/fabricjs.js')}}"></script>
-    <script>
-        $(document).ready(() => {
-            $.ajax({
-                url: "/getFerramenta/" + MainProperties.ferramenta.id,
-                type: "GET",
-                success: res => {
-                    console.log(res)
-                }
-            })
-        })
+  </div>
+  <script>
+    $(document).ready(() => {
+      $.ajax({ url: "/reset" });
+      setTimeout(() => {
+        $.ajax({
+          url: "/getFerramenta/" + MainProperties.ferramenta.id,
+          type: "GET",
+        });
+      }, 400);
+      setInterval(() => {
+        if (MainFilters.edges.enable == "true") {
+          $("#result").text(MainProperties.ferramenta.edgeDetector);
+        }
+      }, 300);
+    });
 
-        $("#trigger").on("click", () => {
-            $.ajax({
-                url: "/trigger"
-            })
+    $("#trigger").on("click", () => {
+      $.ajax({
+        url: "/trigger",
+      });
 
-            $("#img_detection").attr("src", "/img_feed")
-        })
-    </script>
+      var date = new Date();
+
+      $("#img_detection").attr("src", "/img_feed?" + date.getTime());
+    });
+  </script>
 </body>

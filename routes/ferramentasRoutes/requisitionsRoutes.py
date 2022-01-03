@@ -1,3 +1,4 @@
+import shutil
 from flask import Blueprint, Response, request, jsonify
 from SistemaVisao import vision, MainFilters, MainProperties
 import os
@@ -20,17 +21,28 @@ def gen(cam):
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 
+def gen_raw(cam):
+    while True:
+        frame = cam.raw()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
+
 def gen_img(cam):
     while True:
         frame = cam.view()
-        if frame != "":
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 
 @requisitionsRoutes.route('/video_feed')
 def video_feed():
     return Response(gen(cam), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@requisitionsRoutes.route('/raw_video')
+def raw_video():
+    return Response(gen_raw(cam), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @requisitionsRoutes.route('/img_feed')
@@ -106,7 +118,7 @@ def thresh():
 def threshupper():
     data = request.form
     thresh = data.get("thresh")
-    MainFilters["edges"]["thresh2"] = thresh
+    MainFilters["edges"]["thresh2"] = int(thresh)
     return ''
 
 
@@ -141,7 +153,7 @@ def pixel():
     data = request.form
     x = data.get("x")
     y = data.get("y")
-    MainFilters["pixels"] = (int(x), int(y),)
+    MainFilters["pixels"] = (int(x), int(y))
     return ''
 
 
@@ -218,6 +230,7 @@ def getProductlist():
             return jsonify({'msg': 'Algo deu errado, tente novamente.'}), 500
     cursor.close()
     con.close()
+    print(products_list)
     return jsonify(products_list), 200
 
 # ********  Retorna produto requisitado  ********
@@ -236,12 +249,19 @@ def getProduct(id):
             return jsonify({'msg': 'Produto não existe!'}), 404
     cursor.close()
     con.close()
-    print(produtos)
     left = 0
     top = 0
     w = 0
     h = 0
+    kernely = 0
+    kernelx = 0
+    kernelfy = 0
+    kernelfx = 0
+    enable = False
+    thresh1 = 0
+    thresh2 = 0
     for i in produtos:
+        print(i)
         if i[0] == "blur":
             MainFilters["blur"] = i[1]
         if i[0] == "left":
@@ -252,9 +272,39 @@ def getProduct(id):
             w = i[1]
         if i[0] == "h":
             h = i[1]
+        if i[0] == "kernely":
+            kernely = i[1]
+        if i[0] == "kernelx":
+            kernelx = i[1]
+        if i[0] == "kernelfy":
+            kernelfy = i[1]
+        if i[0] == "kernelfx":
+            kernelfx = i[1]
+        if i[0] == "edges":
+            enable = i[1]
+        if i[0] == "thresh1":
+            thresh1 = i[1]
+        if i[0] == "thresh2":
+            thresh2 = i[1]
 
     if left > -1 and top > -1 and w > -1 and h > -1:
         MainFilters["roi"] = (left, top, w, h)
+    if kernelx > 0:
+        MainFilters["edges"]["kernelx"] = kernelx
+    if kernely > 0:
+        MainFilters["edges"]["kernely"] = kernely
+    if kernelfy > 0:
+        MainFilters["edges"]["kernelFy"] = kernelfy
+    if kernelfx > 0:
+        MainFilters["edges"]["kernelFx"] = kernelfx
+    if thresh1 > 0:
+        MainFilters["edges"]["thresh1"] = thresh1
+    if thresh2 > 0:
+        MainFilters["edges"]["thresh2"] = thresh2
+    if enable:
+        MainFilters["edges"]["enable"] = enable
+
+    print(kernelx, kernely, kernelfx, kernelfy, thresh1, enable, thresh2)
     return jsonify(produtos), 200
 
 # ********  Cadastra produto  ********
@@ -278,7 +328,7 @@ def cadastraProduct():
         return jsonify({"result": 0, "msg": "Insira a descrição da ferramenta!"})
     cadastra_prod = f''' INSERT INTO ferramentas VALUES (
                     NULL,
-                    '{data.get('nome')}' ,
+                    '{data.get('nome')}',
                     '{data.get('desc')}'
                 )'''
 
@@ -315,7 +365,7 @@ def salvaFerramenta():
         cadastra_prod = f''' INSERT INTO filtros VALUES (
                         NULL,
                         '{data[0]}',
-                        {data[1]},
+                        '{data[1]}',
                         {id}
                     )'''
 
@@ -359,7 +409,7 @@ def deleteFerramenta(id):
             print(e)
             return jsonify({'msg': 'Algo deu errado, tente novamente.'})
 
-    os.remove(f"static/imgs/{id}")
+    shutil.rmtree(f"static/imgs/{id}")
 
     ultimoId = cursor.lastrowid
     con.close()

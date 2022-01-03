@@ -5,7 +5,7 @@
     $("#blur").on("input", () => {
       var formData = new FormData();
       formData.append("blur", $("#blur").val());
-      filtros = addFilter("blur", $("#blur").val());
+      filtros = addFilter("blur", $("#blur").val(), filtros);
       $.ajax({
         url: "/blur",
         cache: false,

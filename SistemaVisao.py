@@ -8,6 +8,7 @@ MainProperties = {
         "index": 0,
         "save_preview": False,
         "pixels": 0,
+        "edgeDetector": False
     }
 }
 
@@ -17,10 +18,10 @@ MainFilters = {
     "blur": False,
     "edges": {
         "enable": False,
-        "kernel-x": 3,
-        "kernel-y": 3,
-        "kernelF-x": 3,
-        "kernelF-y": 3,
+        "kernelx": 3,
+        "kernely": 3,
+        "kernelFx": 3,
+        "kernelFy": 3,
         "thresh1": 127,
         "thresh2": 255,
         "external": True,
@@ -35,13 +36,13 @@ address = "https://192.168.1.2:8080/video"
 class vision:
     def __init__(self):
         # Inicia a câmera
-        self.video = cv2.VideoCapture(0)
-        self.video.open(address)
+        self.video = cv2.VideoCapture(address)
         # Seta a resolução para 4K
         self.video.set(3, 1920)
         self.video.set(4, 1080)
         self.roi_img = []
         self.final_img = []
+        self.raw_img = []
 
     def updateValues(self):
         self.blur = MainFilters["blur"]
@@ -68,8 +69,8 @@ class vision:
 
     def countPixels(self, img):
         x, y = self.pixels
-        x = int((img.shape[0] * x) / 720)
-        y = int((img.shape[1] * y) / 480)
+        x = int((img.shape[1] * x) / 720)
+        y = int((img.shape[0] * y) / 480)
         bgr_value = img[y, x]
         rgb = tuple(reversed(bgr_value))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -85,8 +86,6 @@ class vision:
         upper = (Hu, Su, Vu)
 
         mask1 = cv2.inRange(img, lower, upper)
-        cv2.imshow("mask1", mask1)
-        cv2.waitKey(1)
         return np.sum(mask1)
 
     def apply_blur(self, img):
@@ -101,8 +100,6 @@ class vision:
         kernelY = int(MainFilters["edges"]["kernely"])
         kernelFX = int(MainFilters["edges"]["kernelFx"])
         kernelFY = int(MainFilters["edges"]["kernelFy"])
-        thresh1 = int(MainFilters["edges"]["thresh1"])
-        thresh2 = int(MainFilters["edges"]["thresh2"])
         kernel = tuple((kernelX, kernelY))
         kernelF = tuple((kernelFX, kernelFY))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -111,19 +108,9 @@ class vision:
         gradient = cv2.morphologyEx(filtro, cv2.MORPH_GRADIENT, kernel)
         opening = cv2.morphologyEx(gradient, cv2.MORPH_OPEN, kernel)
         closed = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
-        gradient = cv2.morphologyEx(closed, cv2.MORPH_GRADIENT, kernel)
-
-        canny = cv2.Canny(closed, thresh1,
-                          thresh2)
-
-        cv2.imshow("closed", closed)
-        cv2.imshow("gradient", gradient)
-        cv2.imshow("filtro", filtro)
-        cv2.imshow("canny", canny)
-        cv2.waitKey(1)
 
         contours, hierarchy = cv2.findContours(
-            closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            closed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         return (contours, hierarchy)
 
     def getROI(self, img):
@@ -150,41 +137,57 @@ class vision:
         total = 0
         for i in range(len(cnts1)):
             matches = cv2.matchShapes(cnts1[i], cnts2[i], 1, 0.0)
-            total += matches
-        return total / len(cnts1)
+            if matches <= 0.15:
+                total += 1
+        return total > len(cnts1) * .6
 
     def edgeDetection(self, final):
         contours, hierarchy = self.reduceNoiseAndDetect(final)
         sample = cv2.imread(
-            f"static/imgs/{MainProperties['ferramenta']['id']}/1.jpg")
+            f"static/imgs/{MainProperties['ferramenta']['id']}/1.jpeg")
         sample, _ = self.reduceNoiseAndDetect(sample)
-        cnt1 = np.asarray(sample)
-        cnt2 = np.asarray(contours)
+        cnt1 = np.asarray(sample, dtype=object)
+        cnt2 = np.asarray(contours, dtype=object)
         matches = self.matchContours(cnt1, cnt2)
         for i in range(len(contours)):
             # Internal = !=
             # External = ==
-
             if self.edges["external"] and hierarchy[0][i][3] == -1:
-                if matches > .15:
+                if matches:
+                    MainProperties["ferramenta"]["edgeDetector"] = True
                     cv2.drawContours(final, contours, i, (0, 255, 0), 1)
                 else:
+                    MainProperties["ferramenta"]["edgeDetector"] = False
                     cv2.drawContours(final, contours, i, (0, 0, 255), 1)
             if self.edges["internal"] and hierarchy[0][i][3] != -1:
-                if matches > .15:
+                if matches:
+                    MainProperties["ferramenta"]["edgeDetector"] = True
                     cv2.drawContours(final, contours, i, (0, 255, 0), 1)
                 else:
+                    MainProperties["ferramenta"]["edgeDetector"] = False
                     cv2.drawContours(final, contours, i, (0, 0, 255), 1)
         return final
 
+    def raw(self):
+        if self.raw_img != []:
+            _, jpeg = cv2.imencode('.jpg', self.raw_img)
+            return jpeg.tobytes()
+        img = cv2.imread("static/imgs/00.jpg")
+        _, jpeg = cv2.imencode('.jpg', img)
+        return jpeg.tobytes()
+
     def view(self):  # sourcery skip: class-extract-method
         self.updateValues()
-        _, img = self.video.read()
+        print(self.final_image)
+        if self.final_img == []:
+            img = cv2.imread("static/imgs/00.jpg")
+            _, jpeg = cv2.imencode('.jpg', img)
+            return jpeg.tobytes()
+        img = self.final_img
         final = img.copy()
         if self.roi:
             ROI = self.getROI(final)
             self.roi_img = ROI.copy()
-
             final = ROI.copy()
             if float(self.blur) > 0:
                 final = self.apply_blur(final)
@@ -195,12 +198,12 @@ class vision:
             if self.pixels:
                 num = self.countPixels(final)
                 MainProperties["ferramenta"]["pixels"] = num
-
         _, jpeg = cv2.imencode('.jpg', final)
+        self.final_img = []
         return jpeg.tobytes()
 
     def trigger(self):
-        ret, img = self.video.read()
+        _, img = self.video.read()
         self.final_img = img.copy()
 
     def savePreview(self, img):
@@ -213,6 +216,7 @@ class vision:
     def preview(self):
         self.updateValues()
         _, img = self.video.read()
+        self.raw_img = img
         final = img.copy()
         if self.roi:
             ROI = self.getROI(final)
@@ -237,7 +241,7 @@ class vision:
 
             if MainProperties["ferramenta"]["save_preview"]:
                 MainProperties["ferramenta"]["save_preview"] = False
-                self.savePreview(final)
+                self.savePreview(ROI)
 
         _, jpeg = cv2.imencode('.jpg', final)
         return jpeg.tobytes()

@@ -1,9 +1,92 @@
+<script>
+  pixel = true;
+  $(function () {
+    $("#slider-range").slider({
+      range: true,
+      min: 0,
+      max: 255,
+      values: [0, 255],
+      slide: function (event, ui) {
+        $("#amount").val("R - " + ui.values[0] + " - R " + ui.values[1]);
+      },
+    });
+    $("#amount").val(
+      "R - " +
+        $("#slider-range").slider("values", 0) +
+        " - R " +
+        $("#slider-range").slider("values", 1)
+    );
+  });
+  $(function () {
+    $("#slider-range1").slider({
+      range: true,
+      min: 0,
+      max: 255,
+      values: [0, 255],
+      slide: function (event, ui) {
+        $("#amount1").val("R - " + ui.values[0] + " - R " + ui.values[1]);
+      },
+    });
+    $("#amount1").val(
+      "R - " +
+        $("#slider-range").slider("values", 0) +
+        " - R " +
+        $("#slider-range").slider("values", 1)
+    );
+  });
+  $(function () {
+    $("#slider-range2").slider({
+      range: true,
+      min: 0,
+      max: 255,
+      values: [0, 255],
+      slide: function (event, ui) {
+        $("#amount2").val("R - " + ui.values[0] + " - R " + ui.values[1]);
+      },
+    });
+    $("#amount2").val(
+      "R - " +
+        $("#slider-range").slider("values", 0) +
+        " - R " +
+        $("#slider-range").slider("values", 1)
+    );
+  });
+</script>
 <body>
-  <button
-    class="btn btn-outline-primary mb-3"
-    id="detectar"
-  >
-    Detectar
+  <p>
+    <label for="amount">Red range:</label>
+    <input
+      type="text"
+      id="amount"
+      readonly
+      style="border: 0; color: #ff0000; font-weight: bold"
+    />
+  </p>
+  <p>
+    <label for="amount">Green range:</label>
+    <input
+      type="text"
+      id="amount1"
+      readonly
+      style="border: 0; color: #00ff00; font-weight: bold"
+    />
+  </p>
+  <p>
+    <label for="amount">Blue range:</label>
+    <input
+      type="text"
+      id="amount2"
+      readonly
+      style="border: 0; color: #0000ff; font-weight: bold"
+    />
+  </p>
+
+  <div id="slider-range"></div>
+  <div id="slider-range1"></div>
+  <div id="slider-range2"></div>
+
+  <button class="btn btn-outline-primary mb-3" id="detectar">
+    Fazer contagem
   </button>
   <script>
     $("#detectar").on("click", () => {

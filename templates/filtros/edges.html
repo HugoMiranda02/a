@@ -1,7 +1,7 @@
 <div>
   <div class="form-check">
     <input class="form-check-input" type="checkbox" value="" id="enable" />
-    <label class="form-check-label" for="enable"> Default checkbox </label>
+    <label class="form-check-label" for="enable"> </label>
   </div>
 
   <label for="kernelY" class="form-label">Kernel - Y</label>
@@ -47,26 +47,6 @@
     id="kernelF-x"
     class="mb-3"
   />
-  <label for="kernelY" class="form-label">Threshold 1</label>
-  <input
-    type="range"
-    class="form-range"
-    value="0"
-    min="1"
-    max="255"
-    id="thresh1"
-    class="mb-3"
-  />
-  <label for="kernelY" class="form-label">Threshold 2</label>
-  <input
-    type="range"
-    class="form-range"
-    value="0"
-    min="1"
-    max="255"
-    id="thresh2"
-    class="mb-3"
-  />
   <div class="form-check">
     <input
       class="form-check-input"
@@ -86,7 +66,6 @@
     <label class="form-check-label" for="external"> Contornos Internos </label>
   </div>
   <script>
-    console.log(filtros);
     $(document).ready(() => {
       $.ajax({
         url: "/getEdges",
@@ -120,7 +99,7 @@
     });
     $("#internal").on("click", () => {
       var formData = new FormData();
-      filtros = addFilter("internal", true);
+      filtros = addFilter("internal", true, filtros);
       filtros = removeFilter("external", filtros);
       formData.append("edges", $("#internal").prop("checked"));
       $.ajax({
